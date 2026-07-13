@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?!= include('Styles'); ?>
+  <style>
+    .page { max-width: 460px; margin: 0 auto 40px; padding: 0 16px; }
+    .header-inner { max-width: 460px; margin: 0 auto; }
+    .card-body { padding: 22px; }
+    .card-offset { margin-top: -26px; position: relative; z-index: 2; }
+    .worker-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .avatar-ring {
+      width: 46px; height: 46px; border-radius: 50%; background: var(--navy-900);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-size: 18px; font-weight: 600; flex-shrink: 0;
+    }
+    .worker-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--navy-900); }
+    .worker-role { font-size: 12.5px; color: var(--ink-400); }
+    .info-strip {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--steel-50); border-radius: var(--radius-md); padding: 12px 14px; margin: 14px 0;
+      font-size: 13px;
+    }
+    .info-strip .k { color: var(--ink-400); }
+    .info-strip .v { font-weight: 600; color: var(--ink-900); }
+    .hidden { display: none !important; }
+    .empty-riwayat { text-align: center; color: var(--ink-400); font-size: 13px; padding: 30px 10px; }
+    .footer-nav { text-align: center; margin-top: 18px; padding-bottom: 10px; }
+    .info-sesi {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--steel-50); border-radius: var(--radius-md); padding: 10px 14px;
+      margin-top: 12px; font-size: 12.5px; color: var(--ink-600);
+    }
+    .info-sesi button { background: none; border: none; color: var(--danger-600); font-weight: 600; font-size: 12px; cursor: pointer; }
+
+    /* ---------- Riwayat Absensi: tampilan Timeline vertikal ---------- */
+    .timeline { position: relative; padding-left: 2px; }
+    .timeline-item { position: relative; padding-left: 26px; padding-bottom: 18px; }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-item:last-child .timeline-line { display: none; }
+    .timeline-dot {
+      position: absolute; left: 0; top: 3px; width: 13px; height: 13px; border-radius: 50%;
+      border: 2.5px solid #fff; box-shadow: 0 0 0 2px currentColor; z-index: 1;
+    }
+    .timeline-dot.dot-success { background: var(--success-600); color: var(--success-600); }
+    .timeline-dot.dot-warning { background: var(--warning-600); color: var(--warning-600); }
+    .timeline-dot.dot-danger  { background: var(--danger-600);  color: var(--danger-600); }
+    .timeline-dot.dot-neutral { background: var(--ink-400);     color: var(--ink-400); }
+    .timeline-line {
+      position: absolute; left: 5.5px; top: 16px; bottom: -18px; width: 2px; background: var(--steel-200);
+    }
+    .timeline-content { cursor: pointer; }
+    .timeline-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .timeline-tgl { font-weight: 700; font-size: 13.5px; color: var(--navy-900); display: flex; align-items: center; }
+    .timeline-tgl .lib-tag {
+      font-size: 10.5px; color: var(--amber-600); font-weight: 600; margin-left: 6px;
+      background: var(--warning-100); padding: 1px 7px; border-radius: 8px;
+    }
+    .timeline-chevron { font-size: 10px; color: var(--ink-400); margin-left: 6px; transition: transform 0.15s ease; }
+    .timeline-jam { font-size: 12px; color: var(--ink-400); margin-top: 3px; }
+    .timeline-detail {
+      margin-top: 9px; padding: 10px 12px; background: var(--steel-50); border-radius: var(--radius-md);
+      font-size: 12px; color: var(--ink-600); line-height: 1.9;
+    }
+
+    /* ---------- PIN input model OTP (6 kotak terpisah) ---------- */
+    .otp-container { display: flex; gap: 8px; justify-content: center; margin-top: 6px; }
+    .otp-input {
+      width: 44px; height: 54px; text-align: center; font-size: 22px; font-weight: 700;
+      border: 1.5px solid var(--steel-300); border-radius: var(--radius-md);
+      font-family: var(--font-display); color: var(--navy-900); padding: 0;
+      transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .otp-input:focus {
+      outline: none; border-color: var(--amber-500);
+      box-shadow: 0 0 0 3px rgba(245,166,35,0.22); transform: scale(1.05);
+    }
+
+    /* ---------- Sapaan berdasarkan waktu ---------- */
+    .greeting-text {
+      font-size: 12.5px; color: var(--ink-400); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .greeting-text .icon { font-size: 15px; }
+
+    /* ---------- Tombol Check-in/Check-out bulat dengan animasi pulse ---------- */
+    .pulse-wrap { display: flex; justify-content: center; margin: 8px 0 14px; }
+    .pulse-btn {
+      width: 132px; height: 132px; border-radius: 50%; border: none; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      font-family: var(--font-body); font-weight: 700; font-size: 14px; color: #fff;
+      transition: transform 0.08s ease;
+    }
+    .pulse-btn:active { transform: scale(0.96); }
+    .pulse-btn:disabled { opacity: 0.55; cursor: not-allowed; animation: none; box-shadow: none; }
+    .pulse-icon { font-size: 30px; line-height: 1; }
+    .pulse-btn-checkin { background: var(--success-600); animation: pulse-ring-green 2s infinite; }
+    .pulse-btn-checkout { background: var(--danger-600); animation: pulse-ring-red 2s infinite; }
+    @keyframes pulse-ring-green {
+      0% { box-shadow: 0 0 0 0 rgba(30,142,90,0.55); }
+      70% { box-shadow: 0 0 0 22px rgba(30,142,90,0); }
+      100% { box-shadow: 0 0 0 0 rgba(30,142,90,0); }
+    }
+    @keyframes pulse-ring-red {
+      0% { box-shadow: 0 0 0 0 rgba(192,57,43,0.55); }
+      70% { box-shadow: 0 0 0 22px rgba(192,57,43,0); }
+      100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-header">
+    <div class="header-inner">
+      <div class="eyebrow">PT Japa Indotama</div>
+      <h1>Sistem Timesheet Freelance</h1>
+      <div class="desc">Presensi lapangan berbasis GPS</div>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- ===== LOGIN ===== -->
+    <div class="surface card-offset card-body" id="loginCard">
+      <label class="field-label">Nomor HP Terdaftar</label>
+      <input type="tel" id="inputNoHp" placeholder="Contoh: 081234567890" inputmode="numeric">
+      <label class="field-label">PIN</label>
+      <div class="otp-container" id="otpContainer">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="0">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="1">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="2">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="3">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="4">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="5">
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:20px;" onclick="login()">Masuk</button>
+      <div class="loading-row hidden" id="loadingLogin"><div class="spinner"></div>Memeriksa akun...</div>
+      <div class="alert alert-danger" id="msgLogin"></div>
+    </div>
+
+    <!-- ===== SETELAH LOGIN ===== -->
+    <div class="hidden" id="mainArea">
+      <div class="surface card-offset card-body">
+        <div class="greeting-text" id="greetingText"><span class="icon">👋</span> Selamat datang</div>
+        <div class="worker-row">
+          <div class="avatar-ring" id="avatarInisial">-</div>
+          <div>
+            <div class="worker-name" id="namaPekerja">-</div>
+            <div class="worker-role" id="posisiPekerja">-</div>
+          </div>
+        </div>
+        <div class="info-strip">
+          <span class="k">Lokasi Penugasan</span>
+          <span class="v" id="namaLokasi">-</span>
+        </div>
+        <div class="info-sesi">
+          <span>Masuk sebagai Pekerja</span>
+          <button onclick="keluarSesi()">Keluar</button>
+        </div>
+      </div>
+
+      <div class="tabbar" style="margin-top:14px;">
+        <button class="active" id="tabPresensi" onclick="pilihTab('presensi')">Presensi Hari Ini</button>
+        <button id="tabRiwayat" onclick="pilihTab('riwayat')">Riwayat Absensi</button>
+      </div>
+
+      <!-- TAB: PRESENSI -->
+      <div id="isiPresensi" style="margin-top:14px;">
+        <div class="surface card-body" style="text-align:center;">
+          <span class="badge badge-neutral" id="statusBadge" style="margin-bottom:6px;">-</span>
+
+          <div class="pulse-wrap">
+            <button class="pulse-btn pulse-btn-checkin" id="btnCheckIn" onclick="prosesCheckIn()">
+              <span class="pulse-icon">✅</span><span class="pulse-label">Check-in</span>
+            </button>
+            <button class="pulse-btn pulse-btn-checkout hidden" id="btnCheckOut" onclick="prosesCheckOut()">
+              <span class="pulse-icon">🏁</span><span class="pulse-label">Check-out</span>
+            </button>
+          </div>
+
+          <div class="loading-row hidden" id="loadingPresensi"><div class="spinner"></div>Mengambil lokasi GPS...</div>
+          <div class="alert" id="msgPresensi"></div>
+        </div>
+
+        <div class="footer-nav">
+          <a class="link-quiet" href="<?= webAppUrl ?>?page=pengajuan">📝 Ajukan Izin / Lembur</a>
+        </div>
+      </div>
+
+      <!-- TAB: RIWAYAT -->
+      <div class="hidden" id="isiRiwayat" style="margin-top:14px;">
+        <div class="surface card-body">
+          <div id="daftarRiwayat"><div class="loading-row"><div class="spinner"></div>Memuat riwayat...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MENU UNTUK PIC/HRD/ADMIN (login sebagai staf internal, bukan pekerja) ===== -->
+    <div class="hidden" id="menuInternal">
+      <div class="surface card-offset card-body">
+        <div class="greeting-text" id="greetingTextInternal"><span class="icon">👋</span> Selamat datang</div>
+        <div class="worker-row">
+          <div class="avatar-ring" id="avatarInisialInternal">-</div>
+          <div>
+            <div class="worker-name" id="namaInternal">-</div>
+            <div class="worker-role" id="roleInternal">-</div>
+          </div>
+        </div>
+        <div class="info-sesi">
+          <span>Masuk sebagai Staf Internal</span>
+          <button onclick="keluarSesi()">Keluar</button>
+        </div>
+      </div>
+
+      <div class="surface card-body" style="margin-top:14px; text-align:center;">
+        <div class="hint-text" style="margin-bottom:14px;">Pilih halaman yang ingin dibuka:</div>
+        <a class="btn btn-primary btn-block" id="linkApproval" href="#" style="margin-bottom:10px; text-decoration:none; display:block;">✅ Buka Approval</a>
+        <a class="btn btn-ghost btn-block hidden" id="linkDashboard" href="#" style="text-decoration:none; display:block;">📊 Buka Dashboard</a>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const webAppUrl = "<?= webAppUrl ?>";
+    let sesi = null;
+    let tabAktif = 'presensi';
+
+    function tampilkanAlert(elId, teks, jenis) {
+      const el = document.getElementById(elId);
+      el.className = 'alert alert-' + jenis + ' show';
+      el.innerText = teks;
+    }
+
+    // ---------- PIN INPUT MODEL OTP (6 KOTAK) ----------
+    // Auto-pindah fokus ke kotak berikutnya saat diisi, auto-mundur saat Backspace
+    // di kotak kosong, mendukung paste 6 digit sekaligus, dan auto-submit saat penuh.
+    function setupOtpInputs() {
+      const inputs = Array.from(document.querySelectorAll('.otp-input'));
+      inputs.forEach(function(input, idx) {
+        input.addEventListener('input', function(e) {
+          e.target.value = e.target.value.replace(/[^0-9]/g, '');
+          if (e.target.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+          cekOtpPenuhLaluSubmit(inputs);
+        });
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Backspace' && !e.target.value && idx > 0) inputs[idx - 1].focus();
+        });
+        input.addEventListener('paste', function(e) {
+          e.preventDefault();
+          const teks = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+          if (!teks) return;
+          teks.split('').slice(0, inputs.length).forEach(function(ch, i) { inputs[i].value = ch; });
+          const kosong = inputs.find(function(inp) { return !inp.value; });
+          (kosong || inputs[inputs.length - 1]).focus();
+          cekOtpPenuhLaluSubmit(inputs);
+        });
+      });
+    }
+
+    function cekOtpPenuhLaluSubmit(inputs) {
+      const semuaTerisi = inputs.every(function(inp) { return inp.value; });
+      if (semuaTerisi && document.getElementById('inputNoHp').value.trim()) login();
+    }
+
+    function ambilNilaiPin() {
+      return Array.from(document.querySelectorAll('.otp-input')).map(function(i) { return i.value; }).join('');
+    }
+
+    function resetOtpInputs() {
+      const inputs = document.querySelectorAll('.otp-input');
+      inputs.forEach(function(i) { i.value = ''; });
+      inputs[0].focus();
+    }
+
+    // ---------- SAPAAN BERDASARKAN WAKTU ----------
+    function getSapaanWaktu() {
+      const jam = new Date().getHours();
+      if (jam >= 4 && jam < 11) return { teks: 'Selamat Pagi', ikon: '☀️' };
+      if (jam >= 11 && jam < 15) return { teks: 'Selamat Siang', ikon: '🌤️' };
+      if (jam >= 15 && jam < 18) return { teks: 'Selamat Sore', ikon: '🌇' };
+      return { teks: 'Selamat Malam', ikon: '🌙' };
+    }
+
+    function login() {
+      const noHp = document.getElementById('inputNoHp').value.trim();
+      const pin = ambilNilaiPin();
+      if (!noHp || pin.length < 6) { tampilkanAlert('msgLogin', 'Nomor HP dan 6 digit PIN wajib diisi.', 'danger'); return; }
+
+      document.getElementById('loadingLogin').classList.remove('hidden');
+      document.getElementById('msgLogin').classList.remove('show');
+
+      google.script.run
+        .withSuccessHandler(function(hasil) {
+          document.getElementById('loadingLogin').classList.add('hidden');
+          terapkanHasilLogin(hasil);
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loadingLogin').classList.add('hidden');
+          tampilkanAlert('msgLogin', err.message, 'danger');
+          resetOtpInputs();
+        })
+        .loginUniversal(noHp, pin);
+    }
+
+    /**
+     * Menerapkan hasil login (baik dari form OTP maupun auto-login via token di URL)
+     * ke tampilan yang sesuai: pekerja lihat Check-in, PIC/HRD/Admin lihat menu internal.
+     */
+    function terapkanHasilLogin(hasil) {
+      sesi = hasil;
+      document.getElementById('loginCard').classList.add('hidden');
+
+      if (sesi.role === 'Pekerja') {
+        document.getElementById('menuInternal').classList.add('hidden');
+        document.getElementById('mainArea').classList.remove('hidden');
+        tampilkanProfil();
+        tampilkanStatusPresensi();
+      } else {
+        document.getElementById('mainArea').classList.add('hidden');
+        document.getElementById('menuInternal').classList.remove('hidden');
+        tampilkanMenuInternal();
+      }
+    }
+
+    /** Mengisi kartu menu untuk PIC/HRD/Admin, termasuk link ke Approval/Dashboard yang membawa token sesi. */
+    function tampilkanMenuInternal() {
+      document.getElementById('namaInternal').innerText = sesi.nama;
+      document.getElementById('avatarInisialInternal').innerText = sesi.nama.trim().charAt(0).toUpperCase();
+      const labelRole = { PIC: 'PIC / Mandor Lapangan', HRD: 'HRD', Admin: 'Admin' }[sesi.role] || sesi.role;
+      document.getElementById('roleInternal').innerText = labelRole;
+
+      const sapaan = getSapaanWaktu();
+      const namaDepan = sesi.nama.trim().split(' ')[0];
+      document.getElementById('greetingTextInternal').innerHTML =
+        '<span class="icon">' + sapaan.ikon + '</span> ' + sapaan.teks + ', ' + namaDepan + '!';
+
+      document.getElementById('linkApproval').href = webAppUrl + '?page=approval&token=' + encodeURIComponent(sesi.token);
+
+      const linkDash = document.getElementById('linkDashboard');
+      if (sesi.role === 'HRD' || sesi.role === 'Admin') {
+        linkDash.href = webAppUrl + '?page=dashboard&token=' + encodeURIComponent(sesi.token);
+        linkDash.classList.remove('hidden');
+      } else {
+        linkDash.classList.add('hidden');
+      }
+    }
+
+    function tampilkanProfil() {
+      document.getElementById('namaPekerja').innerText = sesi.nama;
+      document.getElementById('posisiPekerja').innerText = sesi.posisi || 'Freelance';
+      document.getElementById('avatarInisial').innerText = sesi.nama.trim().charAt(0).toUpperCase();
+      document.getElementById('namaLokasi').innerText = sesi.lokasi ? sesi.lokasi.nama : 'Belum diatur';
+
+      const sapaan = getSapaanWaktu();
+      const namaDepan = sesi.nama.trim().split(' ')[0];
+      document.getElementById('greetingText').innerHTML =
+        '<span class="icon">' + sapaan.ikon + '</span> ' + sapaan.teks + ', ' + namaDepan + '!';
+    }
+
+    // Fokuskan kotak PIN pertama begitu halaman siap
+    setupOtpInputs();
+
+    // ---------- AUTO-LOGIN VIA TOKEN (Opsi 2: sesi bertoken) ----------
+    // Jika halaman ini dibuka lewat link yang membawa token sesi yang masih
+    // berlaku (misal habis klik "Buka Approval" dari menu internal), langsung
+    // tampilkan halaman yang sesuai TANPA minta login ulang.
+    const tokenAwal = "<?= tokenAwal ?>";
+    const sesiAwalJson = <?!= sesiAwalJson ?>;
+
+    if (sesiAwalJson) {
+      document.getElementById('loadingLogin').classList.remove('hidden');
+      google.script.run
+        .withSuccessHandler(function(hasil) {
+          document.getElementById('loadingLogin').classList.add('hidden');
+          terapkanHasilLogin(hasil);
+        })
+        .withFailureHandler(function() {
+          // Sesi kadaluarsa/tidak valid -- biarkan tampil form login biasa, tidak perlu alert menakutkan
+          document.getElementById('loadingLogin').classList.add('hidden');
+        })
+        .ambilDataTampilanDariToken(tokenAwal);
+    }
+
+    function pilihTab(t) {
+      tabAktif = t;
+      document.getElementById('tabPresensi').classList.toggle('active', t === 'presensi');
+      document.getElementById('tabRiwayat').classList.toggle('active', t === 'riwayat');
+      document.getElementById('isiPresensi').classList.toggle('hidden', t !== 'presensi');
+      document.getElementById('isiRiwayat').classList.toggle('hidden', t !== 'riwayat');
+      if (t === 'riwayat') muatRiwayat();
+    }
+
+    function tampilkanStatusPresensi() {
+      const badge = document.getElementById('statusBadge');
+      const btnIn = document.getElementById('btnCheckIn');
+      const btnOut = document.getElementById('btnCheckOut');
+
+      if (sesi.statusHariIni.sudahCheckOut) {
+        badge.className = 'badge badge-success';
+        badge.innerText = '✔ Sudah Check-in & Check-out Hari Ini';
+        btnIn.classList.add('hidden'); btnOut.classList.add('hidden');
+      } else if (sesi.statusHariIni.sudahCheckIn) {
+        badge.className = 'badge badge-warning';
+        badge.innerText = '● Sudah Check-in (' + sesi.statusHariIni.jamCheckIn + ') — Belum Check-out';
+        btnIn.classList.add('hidden'); btnOut.classList.remove('hidden');
+      } else {
+        badge.className = 'badge badge-neutral';
+        badge.innerText = 'Belum Presensi Hari Ini';
+        btnIn.classList.remove('hidden'); btnOut.classList.add('hidden');
+      }
+    }
+
+    function ambilLokasiGPS(callback, onGagal) {
+      if (!navigator.geolocation) {
+        tampilkanAlert('msgPresensi', 'HP Anda tidak mendukung layanan Lokasi/GPS.', 'danger');
+        if (onGagal) onGagal();
+        return;
+      }
+      document.getElementById('loadingPresensi').classList.remove('hidden');
+      document.getElementById('msgPresensi').classList.remove('show');
+      navigator.geolocation.getCurrentPosition(
+        function(pos) { callback(pos.coords.latitude, pos.coords.longitude); },
+        function(err) {
+          document.getElementById('loadingPresensi').classList.add('hidden');
+          tampilkanAlert('msgPresensi', 'Gagal mengambil lokasi GPS. Pastikan izin lokasi diaktifkan. (' + err.message + ')', 'danger');
+          if (onGagal) onGagal();
+        },
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    }
+
+    function prosesCheckIn() {
+      const btn = document.getElementById('btnCheckIn');
+      btn.disabled = true;
+      ambilLokasiGPS(function(lat, lng) {
+        google.script.run
+          .withSuccessHandler(function(hasil) {
+            document.getElementById('loadingPresensi').classList.add('hidden');
+            tampilkanAlert('msgPresensi', hasil.pesan, hasil.anomali ? 'warning' : 'success');
+            sesi.statusHariIni = { sudahCheckIn: true, sudahCheckOut: false, jamCheckIn: 'baru saja' };
+            tampilkanStatusPresensi();
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById('loadingPresensi').classList.add('hidden');
+            tampilkanAlert('msgPresensi', err.message, 'danger');
+            btn.disabled = false;
+          })
+          .doCheckIn(sesi.idPekerja, lat, lng);
+      }, function() { btn.disabled = false; });
+    }
+
+    function prosesCheckOut() {
+      const btn = document.getElementById('btnCheckOut');
+      btn.disabled = true;
+      ambilLokasiGPS(function(lat, lng) {
+        google.script.run
+          .withSuccessHandler(function(hasil) {
+            document.getElementById('loadingPresensi').classList.add('hidden');
+            tampilkanAlert('msgPresensi', hasil.pesan, hasil.anomali ? 'warning' : 'success');
+            sesi.statusHariIni = { sudahCheckIn: true, sudahCheckOut: true };
+            tampilkanStatusPresensi();
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById('loadingPresensi').classList.add('hidden');
+            tampilkanAlert('msgPresensi', err.message, 'danger');
+            btn.disabled = false;
+          })
+          .doCheckOut(sesi.idPekerja, lat, lng);
+      }, function() { btn.disabled = false; });
+    }
+
+    // ---------- TAB RIWAYAT ABSENSI ----------
+    // Catatan: sesuai kebijakan, riwayat HANYA menampilkan status kehadiran
+    // (jam masuk/pulang & valid/anomali), TIDAK menampilkan angka upah/Rupiah.
+    function muatRiwayat() {
+      document.getElementById('daftarRiwayat').innerHTML = '<div class="loading-row"><div class="spinner"></div>Memuat riwayat...</div>';
+      google.script.run
+        .withSuccessHandler(renderRiwayat)
+        .withFailureHandler(function(err) {
+          document.getElementById('daftarRiwayat').innerHTML = '<div class="empty-riwayat">Gagal memuat: ' + err.message + '</div>';
+        })
+        .getRiwayatPresensiSaya(sesi.idPekerja, 30);
+    }
+
+    function renderRiwayat(daftar) {
+      const container = document.getElementById('daftarRiwayat');
+      if (!daftar || daftar.length === 0) {
+        container.innerHTML = '<div class="empty-riwayat">Belum ada riwayat presensi dalam 30 hari terakhir.</div>';
+        return;
+      }
+      container.innerHTML = '<div class="timeline" id="timelineList"></div>';
+      const timeline = document.getElementById('timelineList');
+
+      daftar.forEach(function(r, idx) {
+        let dotClass = 'dot-neutral', badgeClass = 'badge-neutral', badgeText = r.statusApproval;
+        if (r.statusApproval === 'Auto Approved' || r.statusApproval === 'Approved') { dotClass = 'dot-success'; badgeClass = 'badge-success'; badgeText = 'Valid'; }
+        else if (r.statusApproval === 'Perlu Approval') { dotClass = 'dot-warning'; badgeClass = 'badge-warning'; badgeText = 'Menunggu Approval'; }
+        else if (r.statusApproval === 'Rejected') { dotClass = 'dot-danger'; badgeClass = 'badge-danger'; badgeText = 'Ditolak'; }
+
+        const item = document.createElement('div');
+        item.className = 'timeline-item';
+        item.innerHTML =
+          '<div class="timeline-dot ' + dotClass + '"></div>' +
+          '<div class="timeline-line"></div>' +
+          '<div class="timeline-content" onclick="toggleDetailRiwayat(' + idx + ')">' +
+            '<div class="timeline-head">' +
+              '<div class="timeline-tgl">' + r.tanggal +
+                (r.tipeHari === 'Libur' ? '<span class="lib-tag">● Libur</span>' : '') +
+                '<span class="timeline-chevron" id="chev-' + idx + '">▾</span>' +
+              '</div>' +
+              '<span class="badge ' + badgeClass + '">' + badgeText + '</span>' +
+            '</div>' +
+            '<div class="timeline-jam">Masuk ' + r.jamCheckIn + '  →  Pulang ' + r.jamCheckOut + '</div>' +
+            '<div class="timeline-detail hidden" id="detail-' + idx + '">' +
+              'Status Check-in: <b>' + r.statusCheckIn + '</b><br>' +
+              'Status Check-out: <b>' + r.statusCheckOut + '</b><br>' +
+              'Total Jam Kerja: <b>' + r.totalJamKerja + ' jam</b>' +
+            '</div>' +
+          '</div>';
+        timeline.appendChild(item);
+      });
+    }
+
+    // Klik satu baris riwayat untuk buka/tutup detail (jam status, tanpa nominal Rupiah)
+    function toggleDetailRiwayat(idx) {
+      const detail = document.getElementById('detail-' + idx);
+      const chev = document.getElementById('chev-' + idx);
+      const akanDibuka = detail.classList.contains('hidden');
+      detail.classList.toggle('hidden');
+      chev.style.transform = akanDibuka ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+
+    function keluarSesi() {
+      if (sesi && sesi.token) google.script.run.logoutSesi(sesi.token);
+      sesi = null;
+      document.location.href = webAppUrl;
+    }
+  </script>
+</body>
+</html>

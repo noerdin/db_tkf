@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <?!= include('Styles'); ?>
+  <style>
+    .page { max-width: 620px; margin: 0 auto 40px; padding: 0 16px; }
+    .header-inner { max-width: 620px; margin: 0 auto; }
+    .card-body { padding: 20px; }
+    .card-offset { margin-top: -26px; position: relative; z-index: 2; }
+    .hidden { display: none !important; }
+    .filter-row { display: flex; gap: 8px; margin-top: 14px; }
+    .filter-row input { flex: 1; }
+    .filter-row button { flex-shrink: 0; }
+    .item-card {
+      border: 1px solid var(--steel-200); border-radius: var(--radius-md);
+      padding: 14px 16px; margin-top: 12px; border-left: 4px solid var(--amber-500);
+      position: relative; transition: background 0.12s ease, border-color 0.12s ease;
+    }
+    .item-name { font-family: var(--font-display); font-weight: 600; font-size: 15.5px; color: var(--navy-900); margin-bottom: 6px; padding-right: 26px; }
+    .item-detail { font-size: 12.5px; color: var(--ink-600); line-height: 1.7; }
+    .item-detail a { color: var(--navy-700); font-weight: 600; }
+    .item-card textarea { margin-top: 10px; font-size: 13px; min-height: 44px; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-row .btn { flex: 1; padding: 10px; font-size: 13.5px; }
+    .empty-state { text-align: center; color: var(--ink-400); font-size: 13px; padding: 36px 10px; }
+    .footer-nav { text-align: center; margin-top: 16px; padding-bottom: 10px; }
+    .gate-wrap { max-width: 340px; margin: 50px auto; text-align: center; }
+    .gate-wrap .lock { font-size: 30px; margin-bottom: 6px; }
+    .otp-container { display: flex; gap: 7px; justify-content: center; margin-top: 6px; }
+    .otp-input {
+      width: 40px; height: 50px; text-align: center; font-size: 20px; font-weight: 700;
+      border: 1.5px solid var(--steel-300); border-radius: var(--radius-md);
+      font-family: var(--font-display); color: var(--navy-900); padding: 0;
+      transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .otp-input:focus {
+      outline: none; border-color: var(--amber-500);
+      box-shadow: 0 0 0 3px rgba(245,166,35,0.22); transform: scale(1.05);
+    }
+    .link-kecil { background: none; border: none; color: var(--ink-400); font-size: 11.5px; text-decoration: underline; cursor: pointer; }
+    .info-sesi {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--steel-50); border-radius: var(--radius-md); padding: 10px 14px;
+      margin-top: 14px; font-size: 12.5px; color: var(--ink-600);
+    }
+    .info-sesi button { background: none; border: none; color: var(--danger-600); font-weight: 600; font-size: 12px; cursor: pointer; }
+
+    /* ---------- Mode Pilih Banyak (Bulk Action) ---------- */
+    .select-toggle-row { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .select-toggle-row button {
+      background: none; border: none; color: var(--navy-700); font-weight: 600;
+      font-size: 12.5px; cursor: pointer; padding: 4px 2px;
+    }
+    .item-checkbox {
+      display: none; position: absolute; top: 14px; right: 14px;
+      width: 20px; height: 20px; accent-color: var(--navy-900); cursor: pointer;
+    }
+    .item-card.bulk-mode { padding-right: 42px; }
+    .item-card.bulk-mode .item-checkbox { display: block; }
+    .item-card.bulk-mode .btn-row { display: none; }
+    .item-card.selected { border-left-color: var(--navy-900); background: var(--steel-50); }
+    .bulk-bar {
+      background: #fff; border-top: 2px solid var(--steel-200);
+      padding: 14px 4px 4px; margin-top: 16px;
+    }
+    .bulk-bar-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: var(--ink-600); font-weight: 600; }
+    .bulk-bar-row button { background: none; border: none; color: var(--navy-700); font-weight: 600; font-size: 12.5px; cursor: pointer; }
+    .bulk-bar textarea { margin-bottom: 10px; font-size: 13px; min-height: 40px; }
+  </style>
+</head>
+<body>
+
+  <div class="app-header">
+    <div class="header-inner">
+      <div class="eyebrow">PT Japa Indotama</div>
+      <h1>Approval PIC / Mandor</h1>
+      <div class="desc">Tinjau anomali presensi & pengajuan izin/lembur</div>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- Login OTP (utama) -->
+    <div class="surface card-offset gate-wrap" id="loginCard" style="padding:26px; text-align:left;">
+      <div style="text-align:center;">
+        <div class="lock">🔐</div>
+        <div style="font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--navy-900); margin-bottom:4px;">Masuk sebagai PIC / HRD / Admin</div>
+        <div style="font-size:12.5px; color:var(--ink-400); margin-bottom:14px;">Gunakan akun yang didaftarkan HRD</div>
+      </div>
+      <label class="field-label">Nomor HP Terdaftar</label>
+      <input type="tel" id="inputNoHp" placeholder="Contoh: 081298765432" inputmode="numeric">
+      <label class="field-label">PIN</label>
+      <div class="otp-container" id="otpContainer">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="0">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="1">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="2">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="3">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="4">
+        <input type="tel" class="otp-input" maxlength="1" inputmode="numeric" data-idx="5">
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="loginOtp()">Masuk</button>
+      <div class="loading-row hidden" id="loadingLogin"><div class="spinner"></div>Memeriksa akun...</div>
+      <div class="alert alert-danger" id="msgLogin"></div>
+
+      <div style="text-align:center; margin-top:14px;">
+        <button class="link-kecil" onclick="document.getElementById('passwordDaruratBox').classList.remove('hidden')">Masuk pakai Password Akses (darurat)</button>
+      </div>
+      <div class="hidden" id="passwordDaruratBox" style="margin-top:12px; border-top:1px solid var(--steel-200); padding-top:12px;">
+        <input type="password" id="inputPassword" placeholder="Password akses">
+        <button class="btn btn-ghost btn-block" style="margin-top:10px;" onclick="cekAksesDarurat()">Masuk dengan Password</button>
+        <div class="alert alert-danger" id="errPassword" style="margin-top:10px;">Password salah, coba lagi.</div>
+      </div>
+    </div>
+
+    <div class="hidden" id="isiApproval">
+      <div class="surface card-offset card-body">
+        <div class="info-sesi hidden" id="infoSesi">
+          <span id="infoSesiTeks">-</span>
+          <button onclick="keluarSesi()">Keluar</button>
+        </div>
+        <div class="tabbar" style="margin-top:10px;">
+          <button class="active" id="tabPresensi" onclick="pilihTab('presensi')">Presensi Anomali</button>
+          <button id="tabIzinLembur" onclick="pilihTab('izinlembur')">Izin & Lembur</button>
+        </div>
+        <div class="filter-row" id="filterNamaPICBox">
+          <input type="text" id="namaPIC" placeholder="Nama PIC/Mandor (opsional, untuk filter)">
+          <button class="btn btn-ghost" onclick="muatData()">Muat</button>
+        </div>
+        <div class="select-toggle-row">
+          <button onclick="toggleBulkMode()" id="btnToggleBulk">☑️ Mode Pilih Banyak</button>
+        </div>
+      </div>
+
+      <div class="surface card-body" style="margin-top:14px;">
+        <div id="daftarData"><div class="loading-row"><div class="spinner"></div>Memuat data...</div></div>
+      </div>
+    </div>
+
+    <div class="footer-nav">
+      <a class="link-quiet" id="linkKembali" href="<?= webAppUrl ?>">⬅ Kembali ke halaman Check-in</a>
+    </div>
+  </div>
+
+  <script>
+    const webAppUrl = "<?= webAppUrl ?>";
+    let tabAktif = 'presensi';
+    let modeBulkAktif = false;
+    let idTerpilih = new Set();
+    let sesi = null; // data akun login (null jika akses lewat password darurat lama)
+
+    // ---------- PIN INPUT MODEL OTP (6 KOTAK) ----------
+    function setupOtpInputs() {
+      const inputs = Array.from(document.querySelectorAll('.otp-input'));
+      inputs.forEach(function(input, idx) {
+        input.addEventListener('input', function(e) {
+          e.target.value = e.target.value.replace(/[^0-9]/g, '');
+          if (e.target.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+          cekOtpPenuhLaluSubmit(inputs);
+        });
+        input.addEventListener('keydown', function(e) {
+          if (e.key === 'Backspace' && !e.target.value && idx > 0) inputs[idx - 1].focus();
+        });
+        input.addEventListener('paste', function(e) {
+          e.preventDefault();
+          const teks = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+          if (!teks) return;
+          teks.split('').slice(0, inputs.length).forEach(function(ch, i) { inputs[i].value = ch; });
+          const kosong = inputs.find(function(inp) { return !inp.value; });
+          (kosong || inputs[inputs.length - 1]).focus();
+          cekOtpPenuhLaluSubmit(inputs);
+        });
+      });
+    }
+
+    function cekOtpPenuhLaluSubmit(inputs) {
+      const semuaTerisi = inputs.every(function(inp) { return inp.value; });
+      if (semuaTerisi && document.getElementById('inputNoHp').value.trim()) loginOtp();
+    }
+
+    function ambilNilaiPin() {
+      return Array.from(document.querySelectorAll('.otp-input')).map(function(i) { return i.value; }).join('');
+    }
+
+    function resetOtpInputs() {
+      const inputs = document.querySelectorAll('.otp-input');
+      inputs.forEach(function(i) { i.value = ''; });
+      inputs[0].focus();
+    }
+
+    function loginOtp() {
+      const noHp = document.getElementById('inputNoHp').value.trim();
+      const pin = ambilNilaiPin();
+      if (!noHp || pin.length < 6) { tampilkanAlertLogin('Nomor HP dan 6 digit PIN wajib diisi.'); return; }
+
+      document.getElementById('loadingLogin').classList.remove('hidden');
+      document.getElementById('msgLogin').classList.remove('show');
+
+      google.script.run
+        .withSuccessHandler(function(hasil) {
+          document.getElementById('loadingLogin').classList.add('hidden');
+          if (hasil.role === 'Pekerja') {
+            tampilkanAlertLogin('Akun ini terdaftar sebagai Pekerja, bukan PIC/HRD/Admin. Gunakan halaman Check-in untuk presensi.');
+            resetOtpInputs();
+            return;
+          }
+          sesi = hasil;
+          bukaHalamanApproval();
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loadingLogin').classList.add('hidden');
+          tampilkanAlertLogin(err.message);
+          resetOtpInputs();
+        })
+        .loginUniversal(noHp, pin);
+    }
+
+    function tampilkanAlertLogin(teks) {
+      const el = document.getElementById('msgLogin');
+      el.className = 'alert alert-danger show';
+      el.innerText = teks;
+    }
+
+    function cekAksesDarurat() {
+      const pass = document.getElementById('inputPassword').value;
+      google.script.run
+        .withSuccessHandler(function(valid) {
+          if (valid) {
+            sesi = null; // akses darurat, tanpa identitas akun -- filter PIC tetap manual
+            bukaHalamanApproval();
+          } else {
+            document.getElementById('errPassword').classList.add('show');
+          }
+        })
+        .cekPasswordAkses(pass);
+    }
+
+    function bukaHalamanApproval() {
+      document.getElementById('loginCard').classList.add('hidden');
+      document.getElementById('isiApproval').classList.remove('hidden');
+
+      const infoSesi = document.getElementById('infoSesi');
+      const filterBox = document.getElementById('filterNamaPICBox');
+      if (sesi) {
+        infoSesi.classList.remove('hidden');
+        const labelRole = { PIC: 'PIC/Mandor', HRD: 'HRD', Admin: 'Admin' }[sesi.role] || sesi.role;
+        document.getElementById('infoSesiTeks').innerText = '👤 ' + sesi.nama + ' (' + labelRole + ')';
+        filterBox.classList.add('hidden'); // sudah otomatis terfilter ke lokasi akun ini
+        document.getElementById('linkKembali').href = webAppUrl + '?token=' + encodeURIComponent(sesi.token);
+      } else {
+        infoSesi.classList.add('hidden');
+        filterBox.classList.remove('hidden');
+      }
+      muatData();
+    }
+
+    function keluarSesi() {
+      if (sesi && sesi.token) google.script.run.logoutSesi(sesi.token);
+      sesi = null;
+      document.location.href = webAppUrl + '?page=approval';
+    }
+
+    /** Nama approver yang tercatat: dari akun login jika ada, atau dari kotak isian manual (mode darurat). */
+    function namaApproverSaatIni() {
+      if (sesi) return sesi.nama;
+      return document.getElementById('namaPIC').value.trim() || 'PIC/Mandor';
+    }
+
+    // ---------- CEK SESI SAAT HALAMAN DIMUAT ----------
+    const tokenAwal = "<?= tokenAwal ?>";
+    const sesiAwalJson = <?!= sesiAwalJson ?>;
+
+    if (sesiAwalJson && sesiAwalJson.role && sesiAwalJson.role !== 'Pekerja') {
+      // Datang dari link dengan token sesi yang masih berlaku -- langsung masuk, tanpa login ulang
+      sesi = sesiAwalJson;
+      bukaHalamanApproval();
+    } else {
+      setupOtpInputs();
+      // Coba akses tanpa password dulu -- kalau proteksi password lama belum pernah diaktifkan,
+      // langsung masuk mode lama (tanpa identitas akun), supaya tidak mengunci pengguna existing.
+      google.script.run
+        .withSuccessHandler(function(valid) {
+          if (valid) { sesi = null; bukaHalamanApproval(); }
+        })
+        .cekPasswordAkses('');
+    }
+
+    function pilihTab(t) {
+      tabAktif = t;
+      document.getElementById('tabPresensi').classList.toggle('active', t === 'presensi');
+      document.getElementById('tabIzinLembur').classList.toggle('active', t === 'izinlembur');
+      // Matikan mode pilih banyak saat pindah tab, supaya seleksi tidak tercampur
+      modeBulkAktif = false;
+      idTerpilih.clear();
+      document.getElementById('btnToggleBulk').innerText = '☑️ Mode Pilih Banyak';
+      muatData();
+    }
+
+    function muatData() {
+      const namaPIC = sesi ? '' : document.getElementById('namaPIC').value.trim();
+      const daftarIdLokasi = (sesi && sesi.role === 'PIC') ? sesi.idLokasiList : null;
+      document.getElementById('daftarData').innerHTML = '<div class="loading-row"><div class="spinner"></div>Memuat data...</div>';
+
+      if (tabAktif === 'presensi') {
+        google.script.run.withSuccessHandler(renderPresensi).withFailureHandler(tampilkanErrorMuat).getDaftarPresensiPerluApproval(namaPIC, daftarIdLokasi);
+      } else {
+        google.script.run.withSuccessHandler(renderIzinLembur).withFailureHandler(tampilkanErrorMuat).getDaftarPengajuanPerluApproval(namaPIC, daftarIdLokasi);
+      }
+    }
+
+    function tampilkanErrorMuat(err) {
+      document.getElementById('daftarData').innerHTML = '<div class="empty-state">Gagal memuat: ' + err.message + '</div>';
+    }
+
+    // ---------- TAB 1: PRESENSI ANOMALI ----------
+    function renderPresensi(daftar) {
+      const container = document.getElementById('daftarData');
+      if (!daftar || daftar.length === 0) {
+        container.innerHTML = '<div class="empty-state">✅ Tidak ada presensi yang perlu di-approve saat ini.</div>';
+        return;
+      }
+      container.innerHTML = '';
+      daftar.forEach(function(p) {
+        const div = document.createElement('div');
+        div.className = 'item-card' + (modeBulkAktif ? ' bulk-mode' : '');
+        div.innerHTML =
+          '<input type="checkbox" class="item-checkbox" data-id="' + p.ID_Presensi + '" onchange="toggleSelectItem(\'' + p.ID_Presensi + '\', this)">' +
+          '<div class="item-name">' + p.Nama_Pekerja + ' <span class="badge badge-warning">Anomali</span></div>' +
+          '<div class="item-detail">' +
+            '📍 ' + p.Nama_Lokasi + ' &nbsp;•&nbsp; 📅 ' + p.Tanggal + '<br>' +
+            '⏱️ Check-in: ' + p.Jam_CheckIn + ' (jarak ' + p.Jarak_CheckIn_M + 'm)' +
+            (p.Jam_CheckOut ? '<br>⏱️ Check-out: ' + p.Jam_CheckOut + ' (jarak ' + p.Jarak_CheckOut_M + 'm)' : '<br>⏱️ Belum Check-out') +
+          '</div>' +
+          '<textarea placeholder="Catatan approval (opsional)" id="catatan-p-' + p.ID_Presensi + '"></textarea>' +
+          '<div class="btn-row">' +
+            '<button class="btn btn-success" onclick="prosesApprovalPresensi(\'' + p.ID_Presensi + '\', \'approve\')">✔ Approve</button>' +
+            '<button class="btn btn-danger" onclick="prosesApprovalPresensi(\'' + p.ID_Presensi + '\', \'reject\')">✘ Reject</button>' +
+          '</div>';
+        container.appendChild(div);
+      });
+    }
+
+    function prosesApprovalPresensi(idPresensi, keputusan) {
+      const namaPIC = namaApproverSaatIni();
+      const catatan = document.getElementById('catatan-p-' + idPresensi).value.trim();
+      if (!confirm('Yakin ingin ' + (keputusan === 'approve' ? 'MENYETUJUI' : 'MENOLAK') + ' presensi ini?')) return;
+
+      google.script.run
+        .withSuccessHandler(function() { alert('Berhasil diproses.'); muatData(); })
+        .withFailureHandler(function(err) { alert('Gagal: ' + err.message); })
+        .approvePresensi(idPresensi, keputusan, catatan, namaPIC);
+    }
+
+    // ---------- TAB 2: IZIN & LEMBUR ----------
+    function renderIzinLembur(daftar) {
+      const container = document.getElementById('daftarData');
+      if (!daftar || daftar.length === 0) {
+        container.innerHTML = '<div class="empty-state">✅ Tidak ada pengajuan izin/lembur yang menunggu approval.</div>';
+        return;
+      }
+      container.innerHTML = '';
+      daftar.forEach(function(p) {
+        const div = document.createElement('div');
+        div.className = 'item-card' + (modeBulkAktif ? ' bulk-mode' : '');
+        const badgeJenis = p.Jenis_Pengajuan === 'Izin'
+          ? '<span class="badge badge-neutral">Izin - ' + (p.Kategori_Izin || '-') + '</span>'
+          : '<span class="badge badge-neutral">Lembur - ' + (p.Estimasi_Jam_Lembur || '-') + ' jam</span>';
+        div.innerHTML =
+          '<input type="checkbox" class="item-checkbox" data-id="' + p.ID_Pengajuan + '" onchange="toggleSelectItem(\'' + p.ID_Pengajuan + '\', this)">' +
+          '<div class="item-name">' + p.Nama_Pekerja + ' ' + badgeJenis + '</div>' +
+          '<div class="item-detail">' +
+            '📍 ' + p.Nama_Lokasi + ' &nbsp;•&nbsp; 📅 Berlaku: ' + p.Tanggal_Berlaku + '<br>' +
+            '📝 ' + (p.Keterangan || '-') + '<br>' +
+            '🙋 Diajukan oleh: ' + p.Diinput_Oleh +
+            (p.Lampiran_URL ? '<br>📎 <a href="' + p.Lampiran_URL + '" target="_blank">Lihat Lampiran</a>' : '') +
+          '</div>' +
+          '<textarea placeholder="Catatan approval (opsional)" id="catatan-i-' + p.ID_Pengajuan + '"></textarea>' +
+          '<div class="btn-row">' +
+            '<button class="btn btn-success" onclick="prosesApprovalIzinLembur(\'' + p.ID_Pengajuan + '\', \'approve\')">✔ Approve</button>' +
+            '<button class="btn btn-danger" onclick="prosesApprovalIzinLembur(\'' + p.ID_Pengajuan + '\', \'reject\')">✘ Reject</button>' +
+          '</div>';
+        container.appendChild(div);
+      });
+    }
+
+    function prosesApprovalIzinLembur(idPengajuan, keputusan) {
+      const namaPIC = namaApproverSaatIni();
+      const catatan = document.getElementById('catatan-i-' + idPengajuan).value.trim();
+      if (!confirm('Yakin ingin ' + (keputusan === 'approve' ? 'MENYETUJUI' : 'MENOLAK') + ' pengajuan ini?')) return;
+
+      google.script.run
+        .withSuccessHandler(function() { alert('Berhasil diproses.'); muatData(); })
+        .withFailureHandler(function(err) { alert('Gagal: ' + err.message); })
+        .approvePengajuan(idPengajuan, keputusan, catatan, namaPIC);
+    }
+
+    // ---------- MODE PILIH BANYAK (BULK ACTION) ----------
+    function toggleBulkMode() {
+      modeBulkAktif = !modeBulkAktif;
+      idTerpilih.clear();
+      document.getElementById('btnToggleBulk').innerText = modeBulkAktif ? '✕ Batal Pilih' : '☑️ Mode Pilih Banyak';
+      document.querySelectorAll('.item-card').forEach(function(el) {
+        el.classList.toggle('bulk-mode', modeBulkAktif);
+        el.classList.remove('selected');
+      });
+      document.querySelectorAll('.item-checkbox').forEach(function(cb) { cb.checked = false; });
+      renderBulkBar();
+    }
+
+    function toggleSelectItem(id, checkbox) {
+      if (checkbox.checked) idTerpilih.add(id); else idTerpilih.delete(id);
+      checkbox.closest('.item-card').classList.toggle('selected', checkbox.checked);
+      renderBulkBar();
+    }
+
+    function pilihSemuaTerlihat() {
+      document.querySelectorAll('.item-checkbox').forEach(function(cb) {
+        cb.checked = true;
+        idTerpilih.add(cb.dataset.id);
+        cb.closest('.item-card').classList.add('selected');
+      });
+      renderBulkBar();
+    }
+
+    // Menampilkan/menyembunyikan bar aksi bulk di bagian bawah daftar
+    function renderBulkBar() {
+      let bar = document.getElementById('bulkBar');
+      if (!modeBulkAktif || idTerpilih.size === 0) {
+        if (bar) bar.remove();
+        return;
+      }
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.className = 'bulk-bar';
+        bar.id = 'bulkBar';
+        document.getElementById('daftarData').after(bar);
+      }
+      bar.innerHTML =
+        '<div class="bulk-bar-row">' +
+          '<span>' + idTerpilih.size + ' item dipilih</span>' +
+          '<button onclick="pilihSemuaTerlihat()">Pilih Semua yang Tampil</button>' +
+        '</div>' +
+        '<textarea id="catatanBulk" placeholder="Catatan untuk semua item terpilih (opsional)"></textarea>' +
+        '<div class="btn-row">' +
+          '<button class="btn btn-success" onclick="prosesBulk(\'approve\')">✔ Approve ' + idTerpilih.size + ' Item</button>' +
+          '<button class="btn btn-danger" onclick="prosesBulk(\'reject\')">✘ Reject ' + idTerpilih.size + ' Item</button>' +
+        '</div>';
+    }
+
+    function prosesBulk(keputusan) {
+      const namaPIC = namaApproverSaatIni();
+      const catatanEl = document.getElementById('catatanBulk');
+      const catatan = catatanEl ? catatanEl.value.trim() : '';
+      const daftarId = Array.from(idTerpilih);
+      if (daftarId.length === 0) return;
+
+      const teksKeputusan = keputusan === 'approve' ? 'MENYETUJUI' : 'MENOLAK';
+      if (!confirm('Yakin ingin ' + teksKeputusan + ' ' + daftarId.length + ' item sekaligus?\n\nTindakan ini memengaruhi perhitungan upah dan TIDAK BISA dibatalkan.')) return;
+
+      const namaFungsi = tabAktif === 'presensi' ? 'approvePresensiBulk' : 'approvePengajuanBulk';
+      google.script.run
+        .withSuccessHandler(function(hasil) {
+          let pesan = 'Berhasil diproses: ' + hasil.jumlahBerhasil + ' item.';
+          if (hasil.jumlahGagal > 0) pesan += '\nGagal: ' + hasil.jumlahGagal + ' item (' + hasil.pesanGagal.join('; ') + ')';
+          alert(pesan);
+          modeBulkAktif = false;
+          idTerpilih.clear();
+          document.getElementById('btnToggleBulk').innerText = '☑️ Mode Pilih Banyak';
+          muatData();
+        })
+        .withFailureHandler(function(err) { alert('Gagal memproses: ' + err.message); })
+        [namaFungsi](daftarId, keputusan, catatan, namaPIC);
+    }
+  </script>
+</body>
+</html>
